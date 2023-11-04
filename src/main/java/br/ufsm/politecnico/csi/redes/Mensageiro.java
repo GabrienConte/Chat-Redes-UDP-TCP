@@ -8,6 +8,8 @@ import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.HashMap;
 
 public class Mensageiro {
 
@@ -15,6 +17,9 @@ public class Mensageiro {
     private JTextArea chatArea;
     private JTextField inputField;
     private JButton exitButton;
+
+    private Map<String, Long> userAtivos = new HashMap<>();
+    private final long tempoInativo = 30000;
 
     public Mensageiro() throws IOException {
         frame = new JFrame("Chat App");
@@ -57,28 +62,46 @@ public class Mensageiro {
             try {
                 recebeMensagem();
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                RuntimeException a;
+                throw a = new RuntimeException(e);
             }
         }).start();
     }
 
+    private void checagemInatividade(String user) {
+        long currentTime = System.currentTimeMillis();
+        Long lastActivity = userAtivos.get(user);
+
+        if (lastActivity != null && currentTime - lastActivity > tempoInativo) {
+            userAtivos.remove(user);
+        }
+    }
+
+    private void remocaoInativo() {
+        long currentTime = System.currentTimeMillis();
+        userAtivos.keySet().removeIf(user -> currentTime - userAtivos.get(user) > tempoInativo);
+    }
+
     private void recebeMensagem() throws IOException {
         DatagramSocket socket = new DatagramSocket(8085);
+
         while (true) {
             byte[] buffer = new byte[4096];
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             socket.receive(packet);
-            String msg = new String(buffer,
-                    0,
-                    packet.getLength(),
-                    StandardCharsets.UTF_8
-            );
+            String msg = new String(buffer, 0, packet.getLength(), StandardCharsets.UTF_8);
             String endID = packet.getAddress().getHostAddress();
-            synchronized (chatArea) {
-                chatArea.append(endID + ": " + msg + "\n");
+
+            // Atualize o tempo da última atividade do usuário
+            userAtivos.put(endID, System.currentTimeMillis());
+
+            // Verifique os usuários inativos
+            checagemInatividade(endID);
+
+            synchronized (this.chatArea) {
+                this.chatArea.append(endID + ": " + msg + "\n");
             }
         }
-
     }
 
     private void exitChat() {
@@ -90,7 +113,8 @@ public class Mensageiro {
     }
 
     private void sendMessage() throws IOException {
-        String message = inputField.getText();
+        remocaoInativo();
+        String message = this.inputField.getText();
         if (!message.isEmpty()) {
             synchronized (chatArea) {
                 chatArea.append("Você: " + message + "\n");
@@ -109,14 +133,6 @@ public class Mensageiro {
                 DatagramPacket pacote = new DatagramPacket(byteArr, byteArr.length, InetAddress.getByName(ip), 8085);
                 socket.send(pacote);
             }
-
-            DatagramSocket socket = new DatagramSocket();
-            byte[] byteArr = message.getBytes(StandardCharsets.UTF_8);
-            DatagramPacket pacote = new DatagramPacket(byteArr,
-                    byteArr.length,
-                    InetAddress.getByName(ip),
-                    8085);
-            socket.send(pacote);
         }
     }
 
@@ -132,5 +148,4 @@ public class Mensageiro {
             }
         });
     }
-
 }
