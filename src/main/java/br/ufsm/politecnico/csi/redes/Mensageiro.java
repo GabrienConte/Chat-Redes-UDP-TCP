@@ -1,5 +1,6 @@
 package br.ufsm.politecnico.csi.redes;
-
+import javax.swing.JButton;
+import javax.swing.JOptionPane;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -13,6 +14,7 @@ public class Mensageiro {
     private JFrame frame;
     private JTextArea chatArea;
     private JTextField inputField;
+    private JButton exitButton;
 
     public Mensageiro() throws IOException {
         frame = new JFrame("Chat App");
@@ -23,6 +25,16 @@ public class Mensageiro {
         chatArea.setEditable(false);
         chatArea.setWrapStyleWord(true);
         chatArea.setLineWrap(true);
+
+        this.exitButton = new JButton("Sair");
+        this.exitButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                exitChat();
+            }
+        });
+        this.frame.add(this.exitButton, "South");
+
+        this.frame.setVisible(true);
 
         JScrollPane scrollPane = new JScrollPane(chatArea);
         frame.add(scrollPane, BorderLayout.CENTER);
@@ -69,6 +81,14 @@ public class Mensageiro {
 
     }
 
+    private void exitChat() {
+        int option = JOptionPane.showConfirmDialog(frame, "Você deseja sair do chat?", "Aviso", JOptionPane.YES_NO_OPTION);
+        if (option == JOptionPane.YES_OPTION) {
+            // Encerra o chat
+            System.exit(0);
+        }
+    }
+
     private void sendMessage() throws IOException {
         String message = inputField.getText();
         if (!message.isEmpty()) {
@@ -82,6 +102,14 @@ public class Mensageiro {
                 ip = msgArr[0].replace("%", "");
                 message = message.replace(msgArr[0], "");
             }
+
+            if (!ip.equals("255.255.255.255")) {
+                DatagramSocket socket = new DatagramSocket();
+                byte[] byteArr = message.getBytes(StandardCharsets.UTF_8);
+                DatagramPacket pacote = new DatagramPacket(byteArr, byteArr.length, InetAddress.getByName(ip), 8085);
+                socket.send(pacote);
+            }
+
             DatagramSocket socket = new DatagramSocket();
             byte[] byteArr = message.getBytes(StandardCharsets.UTF_8);
             DatagramPacket pacote = new DatagramPacket(byteArr,
