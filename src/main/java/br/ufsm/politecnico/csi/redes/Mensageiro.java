@@ -8,6 +8,8 @@ import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -17,6 +19,10 @@ public class Mensageiro {
     private JTextArea chatArea;
     private JTextField inputField;
     private JButton exitButton;
+    private JList<String> userList;
+    private List<String> users = new ArrayList<>();
+
+
 
     private Map<String, Long> userAtivos = new HashMap<>();
     private final long tempoInativo = 30000;
@@ -66,7 +72,35 @@ public class Mensageiro {
                 throw a = new RuntimeException(e);
             }
         }).start();
+        users = new ArrayList<>();
+
+        userList = new JList<>(users.toArray(new String[0])); // Crie a lista de usuários
+        userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        // Adicione um ouvinte de eventos de clique aos itens da lista
+        userList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) { // Garanta que a seleção foi finalizada
+                String selectedUser = userList.getSelectedValue();
+                if (selectedUser != null) {
+                    openChatWindow(selectedUser);
+                }
+            }
+        });
     }
+
+    private void openChatWindow(String user) {
+        JFrame chatFrame = new JFrame("Chat com " + user);
+        chatFrame.setSize(300, 200);
+        chatFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        JLabel nameLabel = new JLabel("Conversando com " + user);
+        nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        chatFrame.add(nameLabel);
+
+        chatFrame.setVisible(true);
+    }
+
 
     private void checagemInatividade(String user) {
         long currentTime = System.currentTimeMillis();
