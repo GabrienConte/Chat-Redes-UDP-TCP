@@ -44,12 +44,9 @@ public class Mensageiro {
             }
         });
         this.frame.add(this.exitButton, "South");
-
         this.frame.setVisible(true);
-
         JScrollPane scrollPane = new JScrollPane(chatArea);
         frame.add(scrollPane, BorderLayout.CENTER);
-
         inputField = new JTextField();
         inputField.addActionListener(new ActionListener() {
             @Override
@@ -73,13 +70,10 @@ public class Mensageiro {
             }
         }).start();
         users = new ArrayList<>();
-
-        userList = new JList<>(users.toArray(new String[0])); // Crie a lista de usuários
+        userList = new JList<>(users.toArray(new String[0]));
         userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-        // Adicione um ouvinte de eventos de clique aos itens da lista
         userList.addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) { // Garanta que a seleção foi finalizada
+            if (!e.getValueIsAdjusting()) {
                 String selectedUser = userList.getSelectedValue();
                 if (selectedUser != null) {
                     openChatWindow(selectedUser);
@@ -92,12 +86,9 @@ public class Mensageiro {
         JFrame chatFrame = new JFrame("Chat com " + user);
         chatFrame.setSize(300, 200);
         chatFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
         JLabel nameLabel = new JLabel("Conversando com " + user);
         nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
-
         chatFrame.add(nameLabel);
-
         chatFrame.setVisible(true);
     }
 
@@ -118,20 +109,14 @@ public class Mensageiro {
 
     private void recebeMensagem() throws IOException {
         DatagramSocket socket = new DatagramSocket(8085);
-
         while (true) {
             byte[] buffer = new byte[4096];
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             socket.receive(packet);
             String msg = new String(buffer, 0, packet.getLength(), StandardCharsets.UTF_8);
             String endID = packet.getAddress().getHostAddress();
-
-            // Atualize o tempo da última atividade do usuário
             userAtivos.put(endID, System.currentTimeMillis());
-
-            // Verifique os usuários inativos
             checagemInatividade(endID);
-
             synchronized (this.chatArea) {
                 this.chatArea.append(endID + ": " + msg + "\n");
             }
@@ -141,7 +126,6 @@ public class Mensageiro {
     private void exitChat() {
         int option = JOptionPane.showConfirmDialog(frame, "Você deseja sair do chat?", "Aviso", JOptionPane.YES_NO_OPTION);
         if (option == JOptionPane.YES_OPTION) {
-            // Encerra o chat
             System.exit(0);
         }
     }
