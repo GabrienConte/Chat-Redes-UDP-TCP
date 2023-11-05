@@ -7,7 +7,9 @@ import lombok.SneakyThrows;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -81,7 +83,87 @@ public class ChatClientSwing extends JFrame {
             }
         }
     }
-    public ChatClientSwing() throws UnknownHostException {
+
+    public class RecepitorConexaoTCP implements Runnable {
+        private ServerSocket clientSocket;
+        private boolean running = false;
+
+        private static Set<ClientHandler> clients = new HashSet<>();
+
+        public RecepitorConexaoTCP(ServerSocket socket) {
+            this.clientSocket = socket;
+        }
+
+        @SneakyThrows
+        @Override
+        public void run() {
+            running = true;
+            while (running) {
+                try {
+
+                    System.out.println("Listening for a connection");
+                    Socket socketCon = clientSocket.accept();
+
+                    System.out.println("Novo cliente conectado: " + socketCon);
+                    ClientHandler clientHandler = new ClientHandler(socketCon);
+                    clients.add(clientHandler);
+                    new Thread(clientHandler).start();
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+        }
+
+        static class ClientHandler implements Runnable {
+            private Socket clientSocket;
+            private PrintWriter out;
+            private BufferedReader in;
+
+            public ClientHandler(Socket socket) {
+                this.clientSocket = socket;
+            }
+            @SneakyThrows
+            @Override
+            public void run() {
+                try {
+                    System.out.println("teste handler");
+                    out = new PrintWriter(clientSocket.getOutputStream(), true);
+                    in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+                    String clientMessage;
+                    while ((clientMessage = in.readLine()) != null) {
+                        System.out.println("Mensagem recebida de " + clientSocket + ": " + clientMessage);
+
+                        // Enviar a mensagem para todos os outros clientes conectados
+                        for (ClientHandler otherClient : clients) {
+                            if (otherClient != this) {
+                                otherClient.sendMessage(clientMessage);
+                            }
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        in.close();
+                        out.close();
+                        clientSocket.close();
+                        clients.remove(this);
+                        System.out.println("Cliente desconectado: " + clientSocket);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            public void sendMessage(String message) {
+                out.println(message);
+            }
+        }
+    }
+
+    public ChatClientSwing() throws IOException {
         setLayout(new GridBagLayout());
         new Thread(new EnviaSonda()).start();
         JMenuBar menuBar = new JMenuBar();
@@ -133,9 +215,16 @@ public class ChatClientSwing extends JFrame {
                     item.addActionListener(new ActionListener() {
                         @Override
                         public void actionPerformed(ActionEvent e) {
-                            PainelChatPVT painel = (PainelChatPVT) tabbedPane.getTabComponentAt(tab);
-                            tabbedPane.remove(tab);
-                            chatsAbertos.remove(painel.getUsuario());
+                            int option = JOptionPane.showConfirmDialog(tabbedPane, "Você deseja sair do chat?", "Aviso", JOptionPane.YES_NO_OPTION);
+                            if (option == JOptionPane.YES_OPTION) {
+                                PainelChatPVT painel = (PainelChatPVT) tabbedPane.getComponentAt(tab);
+                                tabbedPane.remove(tab);
+                                if(painel !=  null)
+                                {
+                                    chatsAbertos.remove(painel.getUsuario());
+                                }
+                                //System.exit(0);
+                            }
                         }
                     });
                     popupMenu.add(item);
@@ -160,6 +249,8 @@ public class ChatClientSwing extends JFrame {
         setVisible(true);
         new Thread(new EnviaSonda()).start();
         new Thread(new RecebeSonda()).start();
+        RecepitorConexaoTCP recepitorConexaoTCP = new RecepitorConexaoTCP(new ServerSocket(8086));
+        new Thread(recepitorConexaoTCP).start();
     }
 
     private JComponent criaLista() {
@@ -204,7 +295,7 @@ public class ChatClientSwing extends JFrame {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     ((JTextField) e.getSource()).setText("");
-                    areaChat.append(meuUsuario.getNome() + "> " + e.getActionCommand() + "\n");
+                    areaChat.append("Eu > " + e.getActionCommand() + "\n");
                     socket.getOutputStream().write(e.getActionCommand().getBytes());
                 }
             });
@@ -222,9 +313,8 @@ public class ChatClientSwing extends JFrame {
 
     }
 
-    public static void main(String[] args) throws UnknownHostException {
+    public static void main(String[] args) throws IOException {
         new ChatClientSwing();
-
     }
 
     public enum StatusUsuario {

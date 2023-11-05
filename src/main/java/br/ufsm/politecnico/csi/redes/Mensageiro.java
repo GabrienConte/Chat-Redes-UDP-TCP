@@ -108,8 +108,9 @@ public class Mensageiro {
     }
 
     private void recebeMensagem() throws IOException {
-        DatagramSocket socket = new DatagramSocket(8085);
+        DatagramSocket socket = new DatagramSocket(8086);
         while (true) {
+            System.out.println("RECEBE");
             byte[] buffer = new byte[4096];
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             socket.receive(packet);
@@ -134,6 +135,7 @@ public class Mensageiro {
         remocaoInativo();
         String message = this.inputField.getText();
         if (!message.isEmpty()) {
+            System.out.println("ENVIA");
             synchronized (chatArea) {
                 chatArea.append("Você: " + message + "\n");
             }
@@ -148,7 +150,7 @@ public class Mensageiro {
             if (!ip.equals("255.255.255.255")) {
                 DatagramSocket socket = new DatagramSocket();
                 byte[] byteArr = message.getBytes(StandardCharsets.UTF_8);
-                DatagramPacket pacote = new DatagramPacket(byteArr, byteArr.length, InetAddress.getByName(ip), 8085);
+                DatagramPacket pacote = new DatagramPacket(byteArr, byteArr.length, InetAddress.getByName(ip), 8086);
                 socket.send(pacote);
             }
         }
@@ -159,6 +161,7 @@ public class Mensageiro {
             @Override
             public void run() {
                 try {
+                    System.out.println("mensageiro");
                     new Mensageiro();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
