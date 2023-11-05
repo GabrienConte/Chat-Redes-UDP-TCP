@@ -9,24 +9,19 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
-import javax.swing.JButton;
-
+import java.util.HashSet;
 
 public class ChatClientSwing extends JFrame {
 
     private Usuario meuUsuario;
-    private final String endBroadcast = "255.255.255.255";
     private JList listaChat;
     private DefaultListModel dfListModel;
     private JTabbedPane tabbedPane = new JTabbedPane();
     private Set<Usuario> chatsAbertos = new HashSet<>();
 
     public class RecebeSonda implements Runnable {
-
         @SneakyThrows
         @Override
         public void run() {
@@ -37,26 +32,23 @@ public class ChatClientSwing extends JFrame {
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
                 socket.receive(packet);
                 Mensagem sonda = om.readValue(buf, 0, packet.getLength(), Mensagem.class);
-                //if (!sonda.getUsuario().equals(meuUsuario.nome)) {
-                    System.out.println("[SONDA RECEBIDA] " + sonda);
-                    int idx = dfListModel.indexOf(new Usuario(sonda.getUsuario(),
+                System.out.println("[SONDA RECEBIDA] " + sonda);
+                int idx = dfListModel.indexOf(new Usuario(sonda.getUsuario(),
+                        StatusUsuario.valueOf(sonda.getStatus()), packet.getAddress()));
+                if (idx == -1) {
+                    dfListModel.addElement(new Usuario(sonda.getUsuario(),
                             StatusUsuario.valueOf(sonda.getStatus()), packet.getAddress()));
-                    if (idx == -1) {
-                        dfListModel.addElement(new Usuario(sonda.getUsuario(),
-                                StatusUsuario.valueOf(sonda.getStatus()), packet.getAddress()));
-                    } else {
-                        Usuario usuario = (Usuario) dfListModel.getElementAt(idx);
-                        usuario.setStatus(StatusUsuario.valueOf(sonda.getStatus()));
-                        dfListModel.remove(idx);
-                        dfListModel.add(idx, usuario);
-                    }
-                //}
+                } else {
+                    Usuario usuario = (Usuario) dfListModel.getElementAt(idx);
+                    usuario.setStatus(StatusUsuario.valueOf(sonda.getStatus()));
+                    dfListModel.remove(idx);
+                    dfListModel.add(idx, usuario);
+                }
             }
         }
     }
 
     public class EnviaSonda implements Runnable {
-
         @SneakyThrows
         @Override
         public void run() {
@@ -73,7 +65,6 @@ public class ChatClientSwing extends JFrame {
                         ChatClientSwing.this.meuUsuario.status.toString());
                 ObjectMapper om = new ObjectMapper();
                 byte[] msgJson = om.writeValueAsBytes(mensagem);
-                //enviam sonda para lista de IPs
                 for (int n = 1; n < 255; n++) {
                     DatagramPacket packet = new DatagramPacket(msgJson,
                             msgJson.length,
@@ -86,8 +77,6 @@ public class ChatClientSwing extends JFrame {
             }
         }
     }
-
-
 
     public class RecepitorConexaoTCP implements Runnable {
         private ServerSocket clientSocket;
@@ -105,20 +94,16 @@ public class ChatClientSwing extends JFrame {
             running = true;
             while (running) {
                 try {
-
                     System.out.println("Listening for a connection");
                     Socket socketCon = clientSocket.accept();
-
                     System.out.println("Novo cliente conectado: " + socketCon);
                     ClientHandler clientHandler = new ClientHandler(socketCon);
                     clients.add(clientHandler);
                     new Thread(clientHandler).start();
-
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
-
         }
 
         static class ClientHandler implements Runnable {
@@ -141,7 +126,6 @@ public class ChatClientSwing extends JFrame {
                     while ((clientMessage = in.readLine()) != null) {
                         System.out.println("Mensagem recebida de " + clientSocket + ": " + clientMessage);
 
-                        // Enviar a mensagem para todos os outros clientes conectados
                         for (ClientHandler otherClient : clients) {
                             if (otherClient != this) {
                                 otherClient.sendMessage(clientMessage);
@@ -222,7 +206,6 @@ public class ChatClientSwing extends JFrame {
 
         menuBar.add(sairButton);
 
-
         tabbedPane.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -242,7 +225,6 @@ public class ChatClientSwing extends JFrame {
                                 {
                                     chatsAbertos.remove(painel.getUsuario());
                                 }
-                                //System.exit(0);
                             }
                         }
                     });
@@ -274,8 +256,6 @@ public class ChatClientSwing extends JFrame {
 
     private JComponent criaLista() {
         dfListModel = new DefaultListModel();
-        //dfListModel.addElement(new Usuario("Fulano", StatusUsuario.NAO_PERTURBE, null));
-        //dfListModel.addElement(new Usuario("Cicrano", StatusUsuario.DISPONIVEL, null));
         listaChat = new JList(dfListModel);
         listaChat.addMouseListener(new MouseAdapter() {
             @SneakyThrows
@@ -316,9 +296,8 @@ public class ChatClientSwing extends JFrame {
                 public void actionPerformed(ActionEvent e) {
                     String mensagem = campoEntrada.getText();
                     if (!mensagem.isEmpty()) {
+                        enviarMensagem("Eu > " + mensagem); // Adicione a mensagem na área de chat aqui
                         campoEntrada.setText("");
-                        areaChat.append("Eu > " + mensagem + "\n");
-                        enviarMensagem(mensagem);
                     }
                 }
             });
@@ -328,8 +307,8 @@ public class ChatClientSwing extends JFrame {
         }
 
         private void enviarMensagem(String mensagem) {
+            areaChat.append(mensagem + "\n");
             try {
-                areaChat.append("Eu > " + mensagem + "\n");
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                 out.println(mensagem);
             } catch (IOException e) {
@@ -340,11 +319,6 @@ public class ChatClientSwing extends JFrame {
         public Usuario getUsuario() {
             return usuario;
         }
-
-        public void setUsuario(Usuario usuario) {
-            this.usuario = usuario;
-        }
-
     }
 
     public static void main(String[] args) throws IOException {
@@ -356,7 +330,6 @@ public class ChatClientSwing extends JFrame {
     }
 
     public class Usuario {
-
         private String nome;
         private StatusUsuario status;
         private InetAddress endereco;
@@ -408,5 +381,4 @@ public class ChatClientSwing extends JFrame {
             return this.getNome() + " (" + getStatus().toString() + ")";
         }
     }
-
 }
