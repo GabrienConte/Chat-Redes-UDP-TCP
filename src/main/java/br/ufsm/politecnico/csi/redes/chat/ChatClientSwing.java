@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import javax.swing.JButton;
+
 
 public class ChatClientSwing extends JFrame {
 
@@ -52,6 +54,7 @@ public class ChatClientSwing extends JFrame {
             }
         }
     }
+
     public class EnviaSonda implements Runnable {
 
         @SneakyThrows
@@ -74,7 +77,7 @@ public class ChatClientSwing extends JFrame {
                 for (int n = 1; n < 255; n++) {
                     DatagramPacket packet = new DatagramPacket(msgJson,
                             msgJson.length,
-                            InetAddress.getByName("192.168.0." + n), 8085);
+                            InetAddress.getByName("192.168.1." + n), 8085);
                     socket.send(packet);
                 }
                 try {
@@ -83,6 +86,8 @@ public class ChatClientSwing extends JFrame {
             }
         }
     }
+
+
 
     public class RecepitorConexaoTCP implements Runnable {
         private ServerSocket clientSocket;
@@ -203,6 +208,20 @@ public class ChatClientSwing extends JFrame {
 
         menuBar.add(menu);
         this.setJMenuBar(menuBar);
+
+        JButton sairButton = new JButton("Sair");
+        sairButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int option = JOptionPane.showConfirmDialog(ChatClientSwing.this, "Você deseja sair do chat?", "Aviso", JOptionPane.YES_NO_OPTION);
+                if (option == JOptionPane.YES_OPTION) {
+                    System.exit(0);
+                }
+            }
+        });
+
+        menuBar.add(sairButton);
+
 
         tabbedPane.addMouseListener(new MouseAdapter() {
             @Override
