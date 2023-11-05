@@ -309,17 +309,32 @@ public class ChatClientSwing extends JFrame {
             areaChat.setEditable(false);
             campoEntrada = new JTextField();
             this.socket = socket;
+
             campoEntrada.addActionListener(new ActionListener() {
                 @SneakyThrows
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    ((JTextField) e.getSource()).setText("");
-                    areaChat.append("Eu > " + e.getActionCommand() + "\n");
-                    socket.getOutputStream().write(e.getActionCommand().getBytes());
+                    String mensagem = campoEntrada.getText();
+                    if (!mensagem.isEmpty()) {
+                        campoEntrada.setText("");
+                        areaChat.append("Eu > " + mensagem + "\n");
+                        enviarMensagem(mensagem);
+                    }
                 }
             });
+
             add(new JScrollPane(areaChat), new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
             add(campoEntrada, new GridBagConstraints(0, 1, 1, 1, 1, 0, GridBagConstraints.SOUTH, GridBagConstraints.BOTH, new Insets(0, 0, 0, 0), 0, 0));
+        }
+
+        private void enviarMensagem(String mensagem) {
+            try {
+                areaChat.append("Eu > " + mensagem + "\n");
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                out.println(mensagem);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         public Usuario getUsuario() {
