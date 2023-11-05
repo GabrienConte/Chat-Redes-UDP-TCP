@@ -77,7 +77,7 @@ public class ChatClientSwing extends JFrame {
                 for (int n = 1; n < 255; n++) {
                     DatagramPacket packet = new DatagramPacket(msgJson,
                             msgJson.length,
-                            InetAddress.getByName("192.168.1." + n), 8085);
+                            InetAddress.getByName("192.168.0." + n), 8085);
                     socket.send(packet);
                 }
                 try {
@@ -107,12 +107,14 @@ public class ChatClientSwing extends JFrame {
                 try {
 
                     System.out.println("Listening for a connection");
-                    Socket socketCon = clientSocket.accept();
 
-                    System.out.println("Novo cliente conectado: " + socketCon);
-                    ClientHandler clientHandler = new ClientHandler(socketCon);
-                    clients.add(clientHandler);
-                    new Thread(clientHandler).start();
+                    while(true) {
+                        Socket socketCon = clientSocket.accept();
+                        System.out.println("Novo cliente conectado: " + socketCon);
+                        ClientHandler clientHandler = new ClientHandler(socketCon);
+                        clients.add(clientHandler);
+                        new Thread(clientHandler).start();
+                    }
 
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -152,7 +154,7 @@ public class ChatClientSwing extends JFrame {
                     e.printStackTrace();
                 } finally {
                     try {
-                        in.close();
+                        //in.close();
                         out.close();
                         clientSocket.close();
                         clients.remove(this);
