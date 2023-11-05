@@ -120,7 +120,6 @@ public class ChatClientSwing extends JFrame {
                     e.printStackTrace();
                 }
             }
-
         }
 
         static class ClientHandler implements Runnable {
@@ -154,7 +153,7 @@ public class ChatClientSwing extends JFrame {
                     e.printStackTrace();
                 } finally {
                     try {
-                        //in.close();
+                        in.close();
                         out.close();
                         clientSocket.close();
                         clients.remove(this);
