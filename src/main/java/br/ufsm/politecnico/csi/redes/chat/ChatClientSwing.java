@@ -77,7 +77,7 @@ public class ChatClientSwing extends JFrame {
                 for (int n = 1; n < 255; n++) {
                     DatagramPacket packet = new DatagramPacket(msgJson,
                             msgJson.length,
-                            InetAddress.getByName("192.168.0." + n), 8085);
+                            InetAddress.getByName("192.168.0.0" + n), 8085);
                     socket.send(packet);
                 }
                 try {
@@ -318,7 +318,6 @@ public class ChatClientSwing extends JFrame {
                     String mensagem = campoEntrada.getText();
                     if (!mensagem.isEmpty()) {
                         campoEntrada.setText("");
-                        areaChat.append("Eu > " + mensagem + "\n");
                         enviarMensagem(mensagem);
                     }
                 }
