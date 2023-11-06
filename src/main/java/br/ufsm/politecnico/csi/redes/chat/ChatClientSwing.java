@@ -75,7 +75,7 @@ public class ChatClientSwing extends JFrame {
                 for (int n = 1; n < 255; n++) {
                     DatagramPacket packet = new DatagramPacket(msgJson,
                             msgJson.length,
-                            InetAddress.getByName("192.168.0.0" + n), 8085);
+                            InetAddress.getByName("192.168.81." + n), 8085);
                     socket.send(packet);
                 }
                 try {
@@ -139,11 +139,9 @@ public class ChatClientSwing extends JFrame {
 
                     String clientMessage;
                     ObjectMapper om = new ObjectMapper();
-                    System.out.println(in);
 
                     while ((clientMessage = in.readLine()) != null) {
                         MensagemChat mensagem = om.readValue(clientMessage, MensagemChat.class);
-                        System.out.println(mensagem.toString());
                         System.out.println("Mensagem recebida de " + clientSocket + ": " +clientMessage);
 
                         // Encontre o painel associado ao socket
@@ -308,7 +306,9 @@ public class ChatClientSwing extends JFrame {
                 if (evt.getClickCount() == 2) {
                     int index = list.locationToIndex(evt.getPoint());
                     Usuario user = (Usuario) list.getModel().getElementAt(index);
+                    System.out.println(user);
                     Socket soc = new Socket(user.getEndereco(), 8086);
+                    System.out.println(soc);
                     if (chatsAbertos.add(user)) {
                         tabbedPane.add(user.toString(), new PainelChatPVT(user, soc));
                     }
@@ -354,7 +354,7 @@ public class ChatClientSwing extends JFrame {
             try {
                 areaChat.append("Eu > " + mensagem + "\n");
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                MensagemChat mensagemChat = new MensagemChat(mensagem, this.getUsuario().getNome());
+                MensagemChat mensagemChat = new MensagemChat(mensagem, meuUsuario.getNome());
                 ObjectMapper om = new ObjectMapper();
                 String msgJson = om.writeValueAsString(mensagemChat); // Converte o objeto em uma string JSON
                 out.println(msgJson);
