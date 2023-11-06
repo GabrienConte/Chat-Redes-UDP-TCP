@@ -1,6 +1,7 @@
 package br.ufsm.politecnico.csi.redes.chat;
 
 import br.ufsm.politecnico.csi.redes.model.Mensagem;
+import br.ufsm.politecnico.csi.redes.model.MensagemChat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 
@@ -9,10 +10,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import javax.swing.JButton;
 
 
@@ -20,7 +18,7 @@ public class ChatClientSwing extends JFrame {
 
     private Usuario meuUsuario;
     private final String endBroadcast = "255.255.255.255";
-    private JList listaChat;
+    public JList listaChat;
     private DefaultListModel dfListModel;
     private JTabbedPane tabbedPane = new JTabbedPane();
     private Set<Usuario> chatsAbertos = new HashSet<>();
@@ -87,16 +85,16 @@ public class ChatClientSwing extends JFrame {
         }
     }
 
-
-
     public class RecepitorConexaoTCP implements Runnable {
         private ServerSocket clientSocket;
         private boolean running = false;
+        private JTabbedPane tabbedPane;
 
         private static Set<ClientHandler> clients = new HashSet<>();
 
-        public RecepitorConexaoTCP(ServerSocket socket) {
+        public RecepitorConexaoTCP(ServerSocket socket, JTabbedPane tabbedPane) {
             this.clientSocket = socket;
+            this.tabbedPane = tabbedPane;
         }
 
         @SneakyThrows
@@ -111,7 +109,7 @@ public class ChatClientSwing extends JFrame {
                     while(true) {
                         Socket socketCon = clientSocket.accept();
                         System.out.println("Novo cliente conectado: " + socketCon);
-                        ClientHandler clientHandler = new ClientHandler(socketCon);
+                        ClientHandler clientHandler = new ClientHandler(socketCon, tabbedPane);
                         clients.add(clientHandler);
                         new Thread(clientHandler).start();
                     }
@@ -126,23 +124,47 @@ public class ChatClientSwing extends JFrame {
             private Socket clientSocket;
             private PrintWriter out;
             private BufferedReader in;
+            private JTabbedPane tabbedPane;
 
-            public ClientHandler(Socket socket) {
+            public ClientHandler(Socket socket, JTabbedPane tabbedPane) {
                 this.clientSocket = socket;
+                this.tabbedPane = tabbedPane;
             }
             @SneakyThrows
             @Override
             public void run() {
                 try {
-                    System.out.println("teste handler");
                     out = new PrintWriter(clientSocket.getOutputStream(), true);
                     in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
                     String clientMessage;
-                    while ((clientMessage = in.readLine()) != null) {
-                        System.out.println("Mensagem recebida de " + clientSocket + ": " + clientMessage);
+                    ObjectMapper om = new ObjectMapper();
+                    System.out.println(in);
 
-                        // Enviar a mensagem para todos os outros clientes conectados
+                    while ((clientMessage = in.readLine()) != null) {
+                        MensagemChat mensagem = om.readValue(clientMessage, MensagemChat.class);
+                        System.out.println(mensagem.toString());
+                        System.out.println("Mensagem recebida de " + clientSocket + ": " +clientMessage);
+
+                        // Encontre o painel associado ao socket
+                        Component chatPanel = null;
+                        for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+                            Component component = tabbedPane.getComponentAt(i);
+                            if (component instanceof PainelChatPVT) { // Substitua MeuPainelDeChat pelo tipo de painel real
+                                PainelChatPVT chat = (PainelChatPVT) component; // Substitua MeuPainelDeChat pelo tipo de painel real
+                                if (chat.getUsuario().getNome().equals(mensagem.getUsuario())) {
+                                    chatPanel = chat;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (chatPanel != null) {
+                            // Atualize o painel de bate-papo com a mensagem recebida
+                            ((PainelChatPVT) chatPanel).areaChat.append(mensagem.getUsuario() + " > " + mensagem.getMensagem() + "\n");
+                        }
+
+                        // Envie a mensagem para todos os outros clientes conectados
                         for (ClientHandler otherClient : clients) {
                             if (otherClient != this) {
                                 otherClient.sendMessage(clientMessage);
@@ -163,6 +185,7 @@ public class ChatClientSwing extends JFrame {
                     }
                 }
             }
+
             public void sendMessage(String message) {
                 out.println(message);
             }
@@ -269,7 +292,7 @@ public class ChatClientSwing extends JFrame {
         setVisible(true);
         new Thread(new EnviaSonda()).start();
         new Thread(new RecebeSonda()).start();
-        RecepitorConexaoTCP recepitorConexaoTCP = new RecepitorConexaoTCP(new ServerSocket(8086));
+        RecepitorConexaoTCP recepitorConexaoTCP = new RecepitorConexaoTCP(new ServerSocket(8086), tabbedPane);
         new Thread(recepitorConexaoTCP).start();
     }
 
@@ -331,7 +354,10 @@ public class ChatClientSwing extends JFrame {
             try {
                 areaChat.append("Eu > " + mensagem + "\n");
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                out.println(mensagem);
+                MensagemChat mensagemChat = new MensagemChat(mensagem, this.getUsuario().getNome());
+                ObjectMapper om = new ObjectMapper();
+                String msgJson = om.writeValueAsString(mensagemChat); // Converte o objeto em uma string JSON
+                out.println(msgJson);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -341,10 +367,13 @@ public class ChatClientSwing extends JFrame {
             return usuario;
         }
 
+        public Socket getSocket() {
+            return socket;
+        }
+
         public void setUsuario(Usuario usuario) {
             this.usuario = usuario;
         }
-
     }
 
     public static void main(String[] args) throws IOException {
@@ -408,5 +437,4 @@ public class ChatClientSwing extends JFrame {
             return this.getNome() + " (" + getStatus().toString() + ")";
         }
     }
-
 }
